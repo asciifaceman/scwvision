@@ -1,6 +1,8 @@
 # SCWVision
 A tinker tool playing with the Sony Eyetoy
 
+![img](static/scwvision_prototype.png)
+
 # Sony EyeToy
 The Sony EyeToy was a webcam device developed for use with the PlayStation2. Interestingly, it used generic hardware and is supported by the OV519 driver set.
 

@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,9 +16,8 @@ limitations under the License.
 package cmd
 
 import (
-	"os"
+	"fmt"
 
-	"github.com/asciifaceman/hobocode"
 	"github.com/asciifaceman/scwvision/pkg/eyetoy"
 	"github.com/spf13/cobra"
 )
@@ -34,19 +33,21 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		hobocode.Info("Scanning for Sony Eyetoy device...")
-		devices, err := eyetoy.Scan()
-		if err != nil {
-			hobocode.Errorf("Error scanning: %v", err)
-		}
-		if len(devices) < 1 {
-			hobocode.Error("Found no Sony Eyetoy devices attached.")
-			os.Exit(1)
-		}
-		//spew.Dump(devices)
-		eyetoy.Display(devices)
-		hobocode.Info("Done.")
-
+		fmt.Println(eyetoy.Scan())
+		/*
+			hobocode.Info("Scanning for Sony Eyetoy device...")
+			devices, err := eyetoy.Scan()
+			if err != nil {
+				hobocode.Errorf("Error scanning: %v", err)
+			}
+			if len(devices) < 1 {
+				hobocode.Error("Found no Sony Eyetoy devices attached.")
+				os.Exit(1)
+			}
+			//spew.Dump(devices)
+			eyetoy.Display(devices)
+			hobocode.Info("Done.")
+		*/
 	},
 }
 

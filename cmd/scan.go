@@ -16,9 +16,9 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
+	"github.com/asciifaceman/hobocode"
 	"github.com/asciifaceman/scwvision/pkg/eyetoy"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
 )
 
@@ -33,21 +33,33 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println(eyetoy.Scan())
-		/*
-			hobocode.Info("Scanning for Sony Eyetoy device...")
-			devices, err := eyetoy.Scan()
-			if err != nil {
-				hobocode.Errorf("Error scanning: %v", err)
-			}
-			if len(devices) < 1 {
-				hobocode.Error("Found no Sony Eyetoy devices attached.")
-				os.Exit(1)
-			}
-			//spew.Dump(devices)
-			eyetoy.Display(devices)
-			hobocode.Info("Done.")
-		*/
+		e := &eyetoy.EyeToy{}
+		e.GetContext()
+		err := e.Open()
+		if err != nil {
+			hobocode.Errorf("Error opening device: %v", err)
+		}
+		defer e.Close()
+
+		_, done, ep, err := e.GetInterfaceEndpoint(1)
+		if err != nil {
+			hobocode.Errorf("Failed to get interface and endpoint: %v", err)
+		}
+		defer done()
+
+		readBytes, data, err := e.ReadEndpoint(ep)
+		if err != nil {
+			hobocode.Errorf("Error reading from endpoint [%s]: %v", ep.String(), err)
+			return
+		}
+
+		hobocode.Infof("Read %d bytes", readBytes)
+
+		if readBytes > 0 {
+			hobocode.Infof("Received data:")
+			spew.Dump(data)
+		}
+
 	},
 }
 

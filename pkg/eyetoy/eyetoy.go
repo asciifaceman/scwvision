@@ -51,12 +51,28 @@ func New() (*EyeToy, error) {
 
 /*
 Eyetoy test sequence used by the test entrypoint
+
+  - open connection
+  - initialize controller
+  - initialize sensor
+  - blink for blinks
+  - shut down
 */
 func (e *EyeToy) Test(blinks int) error {
+	e.logger.Info("running test sequence on the eyetoy")
 	g := NewGUSB(e.logger)
-	err := g.Open()
+	done, err := g.Open()
 	if err != nil {
 		return err
 	}
+	e.GUSB = g
+	defer done()
+
+	e.logger.Info("starting initialization")
+	err = e.ProbeCamera()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

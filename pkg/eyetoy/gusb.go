@@ -40,12 +40,12 @@ all Eyetoy models
 
 this can only handle one connected device at the moment
 */
-func (g *GUSB) Open() error {
+func (g *GUSB) Open() (func(), error) {
 	g.logger.Debug("attempting to open connection to sony eyetoy device")
 
 	devs, err := g.Context.OpenDevices(findEyetoy())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if len(devs) > 1 {
@@ -65,36 +65,34 @@ func (g *GUSB) Open() error {
 		device.Close()
 	}
 
-	g.logger.Debugf("acquiring primary config from eyetoy device",
+	g.logger.Debugw("acquiring primary config from eyetoy device",
 		"device", g.Device.Desc.String(),
 		"config", EyeToyPrimaryConfig,
 	)
 
 	c, err := g.Device.Config(EyeToyPrimaryConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	g.Config = c
 
-	return nil
+	return g.Close, nil
 }
 
 // Close closes everything down in the correct order
 func (g *GUSB) Close() {
-	g.logger.Debug("Closing down connections...")
+	g.logger.Debug("closing down connections...")
 	err := g.Config.Close()
 	if err != nil {
 		g.logger.Errorw("failed to close config", "error", err)
 	}
-
-	err = g.Context.Close()
-	if err != nil {
-		g.logger.Errorw("failed to close context", "error", err)
-	}
-
 	err = g.Device.Close()
 	if err != nil {
 		g.logger.Errorw("failed to close device", "error", err)
+	}
+	err = g.Context.Close()
+	if err != nil {
+		g.logger.Errorw("failed to close context", "error", err)
 	}
 }
 

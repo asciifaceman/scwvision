@@ -30,11 +30,14 @@ const (
 OV519 Generic Constants
 */
 const (
-	ReqIO519         uint8 = 1
-	USB_TYPE_VENDOR  uint8 = (0x02 << 5) // 0x00000040 == 64
-	USB_DIR_IN       uint8 = 0x00000080
-	USB_DIR_OUT      uint8 = 0x00000000
-	USB_RECIP_DEVICE uint8 = 0x00
+	RTYPE_READ                   = USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE
+	RTYPE_WRITE                  = USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE
+	ReqIO519               uint8 = 1
+	USB_TYPE_VENDOR        uint8 = (0x02 << 5) // 0x00000040 == 64
+	USB_DIR_IN             uint8 = 0x00000080
+	USB_DIR_OUT            uint8 = 0x00000000
+	USB_RECIP_DEVICE       uint8 = 0x00
+	OV519_ENDPOINT_ADDRESS int   = 1 /* Isoc endpoint number */
 )
 
 /*
@@ -53,6 +56,16 @@ const (
 	OV519_PWDN           uint16 = 0x5D
 	OV519_GPIO_DATA_OUT0 uint16 = 0x71
 	OV519_GPIO_IO_CTRL0  uint16 = 0x72
+
+	OV519_CAM_H_SIZE    uint16 = 0x10
+	OV519_CAM_V_SIZE    uint16 = 0x11
+	OV519_CAM_X_OFFSETL uint16 = 0x12
+	OV519_CAM_X_OFFSETH uint16 = 0x13
+	OV519_CAM_Y_OFFSETL uint16 = 0x14
+	OV519_CAM_Y_OFFSETH uint16 = 0x15
+	OV519_CAM_DIVIDER   uint16 = 0x16
+	OV519_CAM_DFR       uint16 = 0x20
+	OV519_CAM_FORMAT    uint16 = 0x25
 )
 
 /*

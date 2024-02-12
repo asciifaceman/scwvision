@@ -1,33 +1,54 @@
 # SCWVision
-A tinker tool playing with the Sony Eyetoy
+This project is just a tinker-toy where I attempt to reimplement portions of the OV519 linux driver with only the relevant portions for the Sony EyeToy in order to play with it a bit.
 
+You might ask yourself, "why?".
+
+> why not?
+
+You might ask yourself, "why not just use a webcam library"
+
+> And you're right, that would probably work out of the box, but what would I learn?
+
+First working prototype screenshot
 ![img](static/scwvision_prototype.png)
 
-Tested on SLEH-00030
+Developed and Tested for the `SLEH-00030` although all models should utilize the same base chip.
 
-Sensor: OV7648
-Chip: OV519
-
-640x480
-
+| Model      | Controller | Sensor               |
+|------------|------------|----------------------|
+| SLEH-00030 | OV519      | OV7648 (764X family) |
 
 # Sony EyeToy
-The Sony EyeToy was a webcam device developed for use with the PlayStation2. Interestingly, it used generic hardware and is supported by the OV519 driver set.
+The Sony EyeToy was an interesting attempt by Sony to develop a peripheral for the PlayStation 2 to add new ways of interacting with games. It was used to process gestures and other inputs, and could be considered the ancestor of the PSVR/PSVR2 given the EyeToy beget the Move controllers beget the later cameras, tracking technology, etc which led to the present.
 
-I suspect it is likely to be USB1.1 in spec.
+While largely forgotten, the EyeToy was a fascinating and important part of the development of modern PlayStation peripherals.
 
-### What we know
+The sony eyetoy, for all intents and purposes, "is essentially just a normal USB 1.1 camera in a case that matches the PS2's design language" - PS Dev Wiki
 
-The Sony EyeToy Vendor and Product IDs are defined as 
+The EyeToy was capable of 320x240 resolution images on the PS2, but can be pushed to 640x480 with custom drivers (one goal of this project).
+
+### EyeToy Identification
+The SonyEyetoy used the same generic internal hardware, although it was manufactured by several companies throughout its lifecycle.
+
+| Model      | Manufacturer   | Notes    |
+|------------|----------------|----------|
+| SLEH-00030 | Logitech       | Original |
+| SLEH-00031 | Namtai         |          |
+| SCEH-0004  | Namtai/Chicony | Silver redesign |
+
+The EyeToy vendor and product IDs are defined as
 
 ```go
-const SonyEyeToyVendorID uint16 = 1356 // 0x054c Sony Corp.
-const SonyEyeToyProductID uint16 = 340 // 0x0154 Eyetoy Audio Device
+const (
+  SonyEyeToyVendorID  uint16 = 0x054c // 1356 Sony Corp.
+  SonyEyeToyProductID uint16 = 0x0154 // 340 EyeToy Device
+)
 ```
 
-Although on some platforms, such as Windows11 the human readable VendorID is "Logitech" for some reason despite 0x054c definitely being a Sony namespace with many devices.
+Although how an OS interprets these IDs may change, with `0x054c` occasionally appearing to be `Logitech` and `0x0154` alternating between `Eyetoy Audio Device` and `Logitech EyeToy USB Camera` or others, it's definitely a Sony VendorID (with many other devices under its ID).
 
-The Sony EyeToy appears to present a single configuration, with index `1`, and this configuration has 5 interfaces defined by configuration alternates.
+### USB Configuration
+The EyeToy appears to present a single valid configuration (`idx:1`), posessing only a single valid Interface (`idx: 0`), however that interface contains several alternates. The datasheet for the `OV519` does indicate that there should be other endpoints such as `IN:2 Audio/Midi 1.0 1x40 bytes, 1frame` however I have not completed my R&D in this space at the time of this writing and do not know more.
 
 | Configuration | Interface | Alternate | Endpoint | Packet Size |
 |---------------|-----------|-----------|----------|-------------|
@@ -37,27 +58,9 @@ The Sony EyeToy appears to present a single configuration, with index `1`, and t
 | 1             | 0         | 3         | 0x81 1:IN| 768 bytes   |
 | 1             | 0         | 4         | 0x81 1:IN| 896 bytes   |
 
-There may be an IN:2 available for Audio/Midi 1.0. 1x40bytes, 1frame
+Performing a buffered read on `1:0:0:IN` will always fail with a `packet size too large` error since it's packet size is 0.
 
-```
-AS Format Type 1 Descriptor:
-------------------------------
-0x0B bLength
-0x24 bDescriptorType
-0x02 bDescriptorSubtype
-0x01 bFormatType  (FORMAT_TYPE_1)
-0x01 bNrChannels  (1 channels)
-0x02 bSubframeSize
-0x10 bBitResolution  (16 bits per sample)
-0x01 bSamFreqType  (Discrete sampling frequencies)
-0x003E80 tSamFreq(1)  (16000 Hz)
-```
-
-https://forums.pcsx2.net/Thread-Eyetoy-USB-Descriptors
-
-Performing a buffered read on `alternate:0:IN` will always fail with a `packet size too large` error (since it's 0)
-
-However performing buffered reads on the other 4 endpoints will actually perform a roundtrip transaction
+However buffered reads on the other 4 endpoints will perform a roundtrip transaction, 
 
 ```
 [ 0.133531] [0002fea7] libusb: debug [libusb_handle_events_timeout_completed] doing our own event handling
@@ -72,30 +75,12 @@ However performing buffered reads on the other 4 endpoints will actually perform
 [ 0.145624] [0002fea8] libusb: debug [libusb_free_transfer] transfer 0x7faab4001100
 ```
 
-However there is No Data transmitted. I suspect this is because the Eyetoy requires a control request sent to begin sending data, however I have not discovered this as of yet.
+and if the OV519 controller is initialized with JPEG enabled will begin sending a JFIF file header set lacking image data (since the sensor is not yet initialized). There is little interaction with the camera to be had pre-controller-init.
 
 # Development
-There are a few things that need done to tinker against USB devices depending on the context.
+There are a few things that need done to thinker against USB devices depending on the context. This project was only written for and intended to be used on a Linux system, particularly Debian based, and has not been tested by the maintainer elsewhere except in a WSL context.
 
-### Linux
-
-In order to more easily develop against USB devices, you can enable permissions on linux.
-
-/etc/udev/rules.d/10-eyetoy.rules
-```
-SUBSYSTEM=="usb", ATTR{idVendor}=="0x054c", ATTR{idProduct}=="0x0154", MODE="0660", GROUP="plugdev"
-```
-
-then
-
-```
-sudo udevadm control --reload-rules
-```
-
-Then plug the device in (if it was plugged in already, plug-cycle it). If WSL disconnect, reconnect, then re-attach to WSL.
-
-### Linux on WSL
-
+### WSL>>Linux Dependencies
 This has been tested to work on WSL, however you need to bind and then attach the USB device from windows.
 
 ```powershell
@@ -115,3 +100,36 @@ PS C:\WINDOWS\system32> usbipd attach --wsl --busid 2-2
 usbipd bind makes the device sharable, attach mounts it into the WSL instance.
 
 Note: This requires an up to date usbipd.
+
+### Linux
+In order to more easily develop against USB devices, you can enable permissions on linux.
+
+/etc/udev/rules.d/10-eyetoy.rules
+```
+SUBSYSTEM=="usb", ATTR{idVendor}=="054c", ATTR{idProduct}=="0154", MODE="0660", GROUP="plugdev"
+```
+
+then
+
+```
+sudo usermod -a -G plugdev $(whoami)
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+Then plug the device in (if it was plugged in already, plug-cycle it). If WSL disconnect, reconnect, then re-attach to WSL.
+
+# References in no particular order
+It's difficult to attribute every single piece of information and maintain any level of coherence in these documents, so here is a general listing of reference material used in assembling this information.
+
+| Information Present  | Link |
+|----------------------|------|
+| Model manufacturers  | https://www.psdevwiki.com/ps2/EyeToy |
+| Supported resolutions| https://en.wikipedia.org/wiki/EyeToy |
+| Descriptor dump      | https://forums.pcsx2.net/Thread-Eyetoy-USB-Descriptors |
+
+# Authors
+
+| Author | Participation |
+|--------|---------------|
+| ASciifaceman | Owner / Maintainer |

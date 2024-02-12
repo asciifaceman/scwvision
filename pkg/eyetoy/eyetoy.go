@@ -11,21 +11,52 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"go.uber.org/zap"
 )
 
 /*
 EyeToy is the driver interface behind the eyetoy interactions
 */
 type EyeToy struct {
+	logger *zap.SugaredLogger
+
 	// SIGTERM or SIGINT signals
 	term chan os.Signal
+
+	GUSB *GUSB
 }
 
+/*
+New returns an *EyeToy configured for signal-based interrupts
+
+It acquires a gousb context, opens the device connection, configures
+the signal notifys and returns
+*/
 func New() (*EyeToy, error) {
-	e := &EyeToy{}
+	l, err := zap.NewDevelopment()
+	if err != nil {
+		return nil, err
+	}
+
+	e := &EyeToy{
+		logger: l.Named("eyetoy").Sugar(),
+	}
 
 	e.term = make(chan os.Signal, 1)
 	signal.Notify(e.term, syscall.SIGINT, syscall.SIGTERM)
 
 	return e, nil
+}
+
+/*
+Eyetoy test sequence used by the test entrypoint
+*/
+func (e *EyeToy) Test(blinks int) error {
+	g := NewGUSB(e.logger)
+	err := g.Open()
+	if err != nil {
+		return err
+	}
+	return nil
 }

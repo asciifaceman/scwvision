@@ -67,3 +67,7 @@ These are the device registers
 |         |           |     | 5 | USB Reset Enable | 1 |
 |         |           |     | 6 | Power Down SUSPEND Mode Enable | 0 |
 |         |           |     | 7 | UNUSED | 0 |
+| 0x5D    | PWDN      | RW  |   |        | 02|
+|         |           |     | 0 | Operating Mode (1: normal, 0: suspend) | |
+|         |           |     | 1 | Power-Down SUSPEND Enable | |
+|         |           |     | 2 | Power-Down Reset mask (mask=1, unmask=0) | |

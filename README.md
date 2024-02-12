@@ -3,6 +3,14 @@ A tinker tool playing with the Sony Eyetoy
 
 ![img](static/scwvision_prototype.png)
 
+Tested on SLEH-00030
+
+Sensor: OV7648
+Chip: OV519
+
+640x480
+
+
 # Sony EyeToy
 The Sony EyeToy was a webcam device developed for use with the PlayStation2. Interestingly, it used generic hardware and is supported by the OV519 driver set.
 
@@ -28,6 +36,24 @@ The Sony EyeToy appears to present a single configuration, with index `1`, and t
 | 1             | 0         | 2         | 0x81 1:IN| 512 bytes   |
 | 1             | 0         | 3         | 0x81 1:IN| 768 bytes   |
 | 1             | 0         | 4         | 0x81 1:IN| 896 bytes   |
+
+There may be an IN:2 available for Audio/Midi 1.0. 1x40bytes, 1frame
+
+```
+AS Format Type 1 Descriptor:
+------------------------------
+0x0B bLength
+0x24 bDescriptorType
+0x02 bDescriptorSubtype
+0x01 bFormatType  (FORMAT_TYPE_1)
+0x01 bNrChannels  (1 channels)
+0x02 bSubframeSize
+0x10 bBitResolution  (16 bits per sample)
+0x01 bSamFreqType  (Discrete sampling frequencies)
+0x003E80 tSamFreq(1)  (16000 Hz)
+```
+
+https://forums.pcsx2.net/Thread-Eyetoy-USB-Descriptors
 
 Performing a buffered read on `alternate:0:IN` will always fail with a `packet size too large` error (since it's 0)
 

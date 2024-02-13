@@ -1,7 +1,9 @@
 package eyetoy
 
 import (
+	"encoding/hex"
 	"fmt"
+	"time"
 )
 
 // Instruction is a register:value pair
@@ -22,6 +24,15 @@ instruction may be important, accurate, or valid
 var ov519_controller_init []*Instruction = []*Instruction{
 	{"Enable System", OV519_YS_CTRL, 0x6d},
 	{"Unknown", OV519_EN_CLK0, 0x9b},
+	{"Set bit 2 enable jpeg", OV519_EN_CLK1, 0xff},
+	{"Unknown", 0x5d, 0x03},
+	{"UV[7] - I/O - UV Bit [7]", 0x49, 0x01},
+	{"Unknown", 0x48, 0x00},
+	{"Set LED pin output mode.", OV519_GPIO_IO_CTRL0, 0xee}, // bit 4 must be cleared or sensor detection will fail
+	{"Set USB Init", OV519_RESET1, 0x0f},
+	{"Unknown", OV519_RESET1, 0x00}, // may be reset sequence
+	{"Unknown", 0x22, 0x00},
+	/* windows reads 0x55 at this point - we don't care? */
 }
 
 var ov519_controller_stop []*Instruction = []*Instruction{
@@ -41,7 +52,7 @@ Returns the value, status code, and error if any
 func (e *EyeToy) ReadRegister(index uint16) (uint8, int, error) {
 	e.logger.Debugw("reading register", "index", index)
 
-	value := []byte{}
+	value := []byte{0}
 
 	ret, err := e.GUSB.Device.Control(RTYPE_READ, ReqIO519, 0, index, value)
 	if err != nil || ret < 0 {
@@ -135,7 +146,23 @@ func (e *EyeToy) ProbeCamera() error {
 	logger := e.logger.Named("probe")
 	logger.Debug("beginning probe")
 
-	logger.Debug("probe complete")
+	err := e.InitializeController()
+	if err != nil {
+		return err
+	}
+
+	// probe sensor
+
+	// init sensor
+
+	logger.Debug("probe complete, LED on and waiting")
+	e.EnableLED()
+	c := time.NewTimer(3 * time.Second)
+	<-c.C
+	logger.Debug("stopping controller")
+	// shut down
+	e.WriteRegister(OV519_RESET1, 0x0f) // this isn't actually shutting it down
+	e.DisableLED()                      // hiding the issue
 	return nil
 }
 
@@ -145,6 +172,14 @@ that perform an initial wake and configuration
 */
 func (e *EyeToy) InitializeController() error {
 	e.logger.Debug("initializing controller...")
+	for _, rv := range ov519_controller_init {
+		e.logger.Debugw("cinit: reg set", "desc", rv.Desc, "index", hex.EncodeToString([]byte{byte(rv.Reg)}), "value", rv.Val)
+		_, err := e.WriteRegister(rv.Reg, rv.Val)
+		if err != nil {
+			e.ShutdownController()
+			return err
+		}
+	}
 	return nil
 }
 
